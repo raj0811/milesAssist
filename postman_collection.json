@@ -1,0 +1,649 @@
+{
+  "info": {
+    "_postman_id": "33fc5502-1cb8-46d5-81aa-9959d110e199",
+    "name": "New Collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "22738724",
+    "_collection_link": "https://go.postman.co/collection/22738724-33fc5502-1cb8-46d5-81aa-9959d110e199?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "revenue",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "system alerts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "recent transaction",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "system health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        {
+          "name": "get bookings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "booking stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get booking by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:4000/bookings/2f32a440-c860-4ea9-9ecb-97190d706d47",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "bookings",
+                "2f32a440-c860-4ea9-9ecb-97190d706d47"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create bookings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_173f}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": \"00f82f0c-958c-4ef0-a4fc-c79348146c38\",\n    \"serviceName\": \"Financial Consultation\",\n    \"meetingType\": \"virtual\",\n    \"scheduledAt\": \"2026-11-15T10:00:00.000Z\",\n    \"durationMinutes\": 60,\n    \"meetingUrl\": \"https://meet.example.com/consultation\",\n    \"specialNotes\": \"Discuss investment planning\",\n    \"amount\": 100,\n    \"currency\": \"USD\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/bookings/create",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "bookings",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update booking",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_0dcs}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"scheduledAt\": \"2026-11-20T10:00:00.000Z\",\n    \"durationMinutes\": 45,\n    \"meetingType\": \"virtual\",\n    \"meetingUrl\": \"https://meet.example.com/updated\",\n    \"specialNotes\": \"Updated consultation details\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/bookings/65e4bce9-0c07-4c2b-9a2d-d00395f1e50d",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "bookings",
+                "65e4bce9-0c07-4c2b-9a2d-d00395f1e50d"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "reschedule",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_0dcs}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"scheduledAt\": \"2026-11-25T14:00:00.000Z\",\n    \"durationMinutes\": 60\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/bookings/65e4bce9-0c07-4c2b-9a2d-d00395f1e50d/reschedule",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "bookings",
+                "65e4bce9-0c07-4c2b-9a2d-d00395f1e50d",
+                "reschedule"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_0dcs}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"cancellationReason\": \"Customer requested cancellation\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/bookings/65e4bce9-0c07-4c2b-9a2d-d00395f1e50d/cancel",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "bookings",
+                "65e4bce9-0c07-4c2b-9a2d-d00395f1e50d",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "create admin",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\":\"Raj\",\r\n    \"email\":\"rpbarmaiya2@gmail.com\",\r\n    \"password\":\"12345678\",\r\n    \"role\":\"super_admin\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/admin/create",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "admin",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"rpbarmaiya@gmail.com\",\r\n      \"password\":\"12345678\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/admin/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "admin",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"role\": \"viewer\",\n    \"status\": \"active\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/user/create",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "user",
+                "create"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get user by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_0mvj}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/user/a57378b9-afa7-426f-a1ca-058ad2ec2120",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "user",
+                "a57378b9-afa7-426f-a1ca-058ad2ec2120"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get all User",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{json_web_token_0nf1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:4000/user/fetch",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "user",
+                "fetch"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update user",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transaction",
+      "item": [
+        {
+          "name": "get all transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "tranasction stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": ""
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get transaction by id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_0mvj}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:4000/transactions/71d68046-d609-4755-9d3c-a34674ff24e4",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "transactions",
+                "71d68046-d609-4755-9d3c-a34674ff24e4"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create transaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_0mvj}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": \"00f82f0c-958c-4ef0-a4fc-c79348146c38\",\n    \"bookingId\": null,\n    \"type\": \"payment\",\n    \"amount\": 150,\n    \"currency\": \"USD\",\n    \"paymentMethod\": \"upi\",\n    \"paymentDetails\": {\n      \"upiId\": \"customer@upi\"\n    },\n    \"gatewayName\": \"ExampleGateway\",\n    \"notes\": \"Test transaction\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/transactions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "transactions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update transaction",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token_0mvj}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"success\",\n    \"notes\": \"Payment confirmed\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:4000/transactions/901ec2b2-6e6e-48d5-95ea-1415bf966f9a/status",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "4000",
+              "path": [
+                "transactions",
+                "901ec2b2-6e6e-48d5-95ea-1415bf966f9a",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "json_web_token_12b7",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_0nf1",
+      "secret": true
+    },
+    {
+      "key": "bearer_token_0mvj",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_0jvo",
+      "secret": true
+    },
+    {
+      "key": "bearer_token_004c",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_04nj",
+      "secret": true
+    },
+    {
+      "key": "bearer_token_173f",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_1685",
+      "secret": true
+    },
+    {
+      "key": "bearer_token_0dcs",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_055q",
+      "secret": true
+    },
+    {
+      "key": "bearer_token_0y35",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_1a73",
+      "secret": true
+    },
+    {
+      "key": "bearer_token_0ztk",
+      "secret": true
+    },
+    {
+      "key": "json_web_token_0moz",
+      "secret": true
+    }
+  ]
+}
