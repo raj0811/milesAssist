@@ -22,6 +22,7 @@ import { TransactionController } from './transaction/transaction.controller';
 import { TransactionService } from './transaction/transaction.service';
 import { AdminService } from './admin/admin.service';
 import { JwtService } from '@nestjs/jwt';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { JwtService } from '@nestjs/jwt';
     DatabaseModule,
     AdminModule,
     DashboardModule,
+    RedisModule,
   ],
 
   controllers: [

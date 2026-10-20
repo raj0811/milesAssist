@@ -4,9 +4,10 @@ import { TransactionService } from './transaction.service';
 import { DatabaseModule } from 'src/database/database.module';
 import { AuthGuard } from 'src/auth/user.authGuard';
 import { AdminModule } from 'src/admin/admin.module';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
-    imports: [DatabaseModule, AdminModule],
+    imports: [DatabaseModule, AdminModule, RedisModule],
     controllers: [TransactionController],
     providers: [TransactionService, AuthGuard],
     exports: [TransactionService]

@@ -9,7 +9,6 @@ export class BookingsController {
         private readonly bookingService: BookingsService,
     ) { }
 
-    // GET /bookings?search=john&status=confirmed
     @Get()
     async getAllBookings(
         @Query('page') page = '1',

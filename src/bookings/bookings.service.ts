@@ -3,14 +3,15 @@ import { Booking, BookingStatus } from '../database/schemas/booking.entity';
 import { DatabaseService } from 'src/database/database.service';
 import { CancelBookingDto, CreateBookingDto, RescheduleBookingDto } from 'src/dto/bookings.dto';
 import { randomUUID } from 'crypto';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class BookingsService {
     constructor(
         private readonly databaseService: DatabaseService,
+        private readonly redisService: RedisService
     ) { }
 
-    // Get all bookings with optional search and status filters
 
     async getAllBookings(
         page = 1,
@@ -24,11 +25,9 @@ export class BookingsService {
     ) {
         const bookingRepository = this.databaseService.bookingRepository;
 
-        // Validate pagination
         page = Math.max(1, Number(page) || 1);
         limit = Math.min(100, Math.max(1, Number(limit) || 10));
 
-        // Whitelist sortable columns to prevent unsafe column selection
         const allowedSortFields = [
             'createdAt',
             'updatedAt',
@@ -46,39 +45,76 @@ export class BookingsService {
         sortOrder =
             sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
 
+        const normalizedSearch = search?.trim() || '';
+        const normalizedStatus = status?.trim() || '';
+
+        const cacheKey = `bookings:list:${JSON.stringify({
+            page,
+            limit,
+            search: normalizedSearch,
+            status: normalizedStatus.toLowerCase(),
+            sortBy,
+            sortOrder,
+            startDate: startDate || '',
+            endDate: endDate || '',
+        })}`;
+
+        try {
+            const cached = await this.redisService.get<{
+                data: any[];
+                meta: {
+                    page: number;
+                    limit: number;
+                    total: number;
+                    totalPages: number;
+                };
+            }>(cacheKey);
+
+            if (cached !== null) {
+                return cached;
+            }
+        } catch (error) {
+            console.log('Redis cache read failed:', error);
+        }
+
+
         const query = bookingRepository
             .createQueryBuilder('booking')
             .leftJoinAndSelect('booking.user', 'user');
 
-        // Search by booking reference, service, customer name or email
-        if (search?.trim()) {
+
+        if (normalizedSearch) {
             query.andWhere(
                 `(
                 booking."bookingReference" ILIKE :search
                 OR booking."serviceName" ILIKE :search
-                OR user.name ILIKE :search
-                OR user.email ILIKE :search
+                OR "user".name ILIKE :search
+                OR "user".email ILIKE :search
             )`,
-                { search: `%${search.trim()}%` },
+                { search: `%${normalizedSearch}%` },
             );
         }
 
-        // Filter by booking status
-        if (status && status.toLowerCase() !== 'all') {
+
+        if (normalizedStatus && normalizedStatus.toLowerCase() !== 'all') {
             const allowedStatuses = Object.values(BookingStatus);
 
-            if (!allowedStatuses.includes(status as BookingStatus)) {
+            if (!allowedStatuses.includes(normalizedStatus as BookingStatus)) {
                 throw new BadRequestException(
                     `Invalid booking status. Allowed values: ${allowedStatuses.join(', ')}`,
                 );
             }
 
-            query.andWhere('booking.status = :status', { status });
+            query.andWhere('booking.status = :status', {
+                status: normalizedStatus,
+            });
         }
 
-        // Filter by scheduled date range
+        let start: Date | undefined;
+        let end: Date | undefined;
+
         if (startDate) {
-            const start = new Date(startDate);
+            start = new Date(startDate);
 
             if (Number.isNaN(start.getTime())) {
                 throw new BadRequestException('Invalid startDate');
@@ -90,7 +126,7 @@ export class BookingsService {
         }
 
         if (endDate) {
-            const end = new Date(endDate);
+            end = new Date(endDate);
 
             if (Number.isNaN(end.getTime())) {
                 throw new BadRequestException('Invalid endDate');
@@ -101,27 +137,24 @@ export class BookingsService {
             });
         }
 
-        if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+        if (start && end && start > end) {
             throw new BadRequestException(
                 'startDate must be before or equal to endDate',
             );
         }
 
-        // Sorting
         query.orderBy(`booking.${sortBy}`, sortOrder);
 
-        // Stable secondary sorting when multiple records share the same value
         if (sortBy !== 'createdAt') {
             query.addOrderBy('booking.createdAt', 'DESC');
         }
 
-        // Pagination
         const [bookings, total] = await query
             .skip((page - 1) * limit)
             .take(limit)
             .getManyAndCount();
 
-        return {
+        const result = {
             data: bookings,
             meta: {
                 page,
@@ -130,10 +163,18 @@ export class BookingsService {
                 totalPages: Math.ceil(total / limit),
             },
         };
+
+        try {
+            await this.redisService.set(cacheKey, result, 60);
+        } catch (error) {
+            console.log('error is saving data in redis ', error);
+
+        }
+
+        return result;
     }
 
 
-    // Get booking dashboard statistics
     async getBookingStats() {
         const bookingRepository = this.databaseService.bookingRepository;
 
@@ -266,6 +307,11 @@ export class BookingsService {
             cancellationReason: null,
         });
 
+        try {
+            await this.redisService.delPattern('bookings:list:*');
+        } catch (error) {
+            console.log('Redis booking cache invalidation failed:', error);
+        }
         return this.databaseService.bookingRepository.save(booking);
     }
 
@@ -306,6 +352,11 @@ export class BookingsService {
             booking.specialNotes = dto.specialNotes;
         }
 
+        try {
+            await this.redisService.delPattern('bookings:list:*');
+        } catch (error) {
+            console.log('Redis booking cache invalidation failed:', error);
+        }
         return this.databaseService.bookingRepository.save(booking);
     }
 
@@ -331,6 +382,12 @@ export class BookingsService {
         booking.status = BookingStatus.CANCELLED;
         booking.cancelledAt = new Date();
         booking.cancellationReason = dto.cancellationReason ?? null;
+
+        try {
+            await this.redisService.delPattern('bookings:list:*');
+        } catch (error) {
+            console.log('Redis booking cache invalidation failed:', error);
+        }
 
         // in real life case wee needed to initiate the refund for that perticular booking if already paid and update the status of refund using webhooks or pg APIs
         return this.databaseService.bookingRepository.save(booking);

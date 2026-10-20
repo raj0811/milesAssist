@@ -13,14 +13,16 @@ import {
 } from '../database/schemas/transaction.entity';
 import { DatabaseService } from 'src/database/database.service';
 import { randomUUID } from 'crypto';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class TransactionService {
     constructor(
         private readonly databaseService: DatabaseService,
+        private readonly redisService: RedisService,
     ) { }
 
-    // 1. Paginated transactions with filters
+
     async getAllTransactions(query: TransactionQueryDto) {
         const {
             page = 1,
@@ -37,21 +39,78 @@ export class TransactionService {
             sortOrder = 'DESC',
         } = query;
 
+
+        const safePage = Math.max(1, Number(page) || 1);
+        const safeLimit = Math.min(100, Math.max(1, Number(limit) || 8));
+
+        const allowedSortFields = [
+            'createdAt',
+            'updatedAt',
+            'amount',
+            'status',
+            'type',
+        ];
+
+        const safeSortBy = allowedSortFields.includes(sortBy)
+            ? sortBy
+            : 'createdAt';
+
+        const safeSortOrder =
+            String(sortOrder).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+        const normalizedSearch = search?.trim() || '';
+
+
+        const cacheKey = `transactions:list:${JSON.stringify({
+            page: safePage,
+            limit: safeLimit,
+            search: normalizedSearch,
+            type: type || '',
+            status: status || '',
+            paymentMethod: paymentMethod || '',
+            startDate: startDate || '',
+            endDate: endDate || '',
+            dateRange,
+            amountRange,
+            sortBy: safeSortBy,
+            sortOrder: safeSortOrder,
+        })}`;
+
+
+        try {
+            const cached = await this.redisService.get<{
+                data: any[];
+                meta: {
+                    page: number;
+                    limit: number;
+                    total: number;
+                    totalPages: number;
+                };
+            }>(cacheKey);
+
+            if (cached !== null) {
+                return cached;
+            }
+        } catch (error) {
+            console.log('Redis transaction cache read failed:', error);
+        }
+
+
         const qb = this.databaseService.transactionRepository
             .createQueryBuilder('transaction')
             .leftJoinAndSelect('transaction.user', 'user');
 
-        if (search?.trim()) {
-            const term = `%${search.trim()}%`;
+        if (normalizedSearch) {
+            const term = `%${normalizedSearch}%`;
 
             qb.andWhere(
                 `(
-          CAST(transaction.id AS TEXT) ILIKE :term
-          OR transaction.transactionReference ILIKE :term
-          OR transaction.gatewayTransactionId ILIKE :term
-          OR user.name ILIKE :term
-          OR user.email ILIKE :term
-        )`,
+                CAST(transaction.id AS TEXT) ILIKE :term
+                OR transaction.transactionReference ILIKE :term
+                OR transaction.gatewayTransactionId ILIKE :term
+                OR "user".name ILIKE :term
+                OR "user".email ILIKE :term
+            )`,
                 { term },
             );
         }
@@ -70,22 +129,36 @@ export class TransactionService {
             });
         }
 
-        // Explicit dates take precedence over the preset.
+
         if (startDate) {
+            const start = new Date(startDate);
+
+            if (Number.isNaN(start.getTime())) {
+                throw new BadRequestException('Invalid startDate');
+            }
+
             qb.andWhere('transaction.createdAt >= :startDate', {
-                startDate: new Date(startDate),
+                startDate: start,
             });
         }
 
         if (endDate) {
             const end = new Date(endDate);
+
+            if (Number.isNaN(end.getTime())) {
+                throw new BadRequestException('Invalid endDate');
+            }
+
             end.setHours(23, 59, 59, 999);
 
             qb.andWhere('transaction.createdAt <= :endDate', {
                 endDate: end,
             });
         } else if (!startDate && dateRange !== 'all') {
-            const days = dateRange === '7d' ? 7 : dateRange === '90d' ? 90 : 30;
+            const days =
+                dateRange === '7d' ? 7 :
+                    dateRange === '90d' ? 90 : 30;
+
             const from = new Date();
             from.setDate(from.getDate() - days);
 
@@ -96,31 +169,38 @@ export class TransactionService {
             case 'under100':
                 qb.andWhere('transaction.amount < :max', { max: 100 });
                 break;
+
             case '100to1000':
-                qb.andWhere('transaction.amount >= :min AND transaction.amount < :max', {
-                    min: 100,
-                    max: 1000,
-                });
+                qb.andWhere(
+                    'transaction.amount >= :min AND transaction.amount < :max',
+                    { min: 100, max: 1000 },
+                );
                 break;
+
             case '1000to10000':
-                qb.andWhere('transaction.amount >= :min AND transaction.amount < :max', {
-                    min: 1000,
-                    max: 10000,
-                });
+                qb.andWhere(
+                    'transaction.amount >= :min AND transaction.amount < :max',
+                    { min: 1000, max: 10000 },
+                );
                 break;
+
             case 'over10000':
                 qb.andWhere('transaction.amount >= :min', { min: 10000 });
                 break;
         }
 
-        qb.orderBy(`transaction.${sortBy}`, sortOrder);
+        qb.orderBy(`transaction.${safeSortBy}`, safeSortOrder);
+
+        if (safeSortBy !== 'createdAt') {
+            qb.addOrderBy('transaction.createdAt', 'DESC');
+        }
 
         const [transactions, total] = await qb
-            .skip((page - 1) * limit)
-            .take(limit)
+            .skip((safePage - 1) * safeLimit)
+            .take(safeLimit)
             .getManyAndCount();
 
-        return {
+        const result = {
             data: transactions.map((t) => ({
                 id: t.id,
                 transactionReference: t.transactionReference,
@@ -140,22 +220,29 @@ export class TransactionService {
                 createdAt: t.createdAt,
             })),
             meta: {
-                page,
-                limit,
+                page: safePage,
+                limit: safeLimit,
                 total,
-                totalPages: Math.ceil(total / limit),
+                totalPages: Math.ceil(total / safeLimit),
             },
         };
+
+        try {
+            await this.redisService.set(cacheKey, result, 60);
+        } catch (error) {
+            console.log('Redis transaction cache write failed:', error);
+        }
+
+        return result;
     }
 
-    // 2. Statistics for the four KPI cards
+
     async getTransactionStats() {
         const repo = this.databaseService.transactionRepository;
 
         const totalTransactions = await repo.count();
 
-        // Sum absolute values so refunds contribute to transaction volume
-        // without subtracting from payment volume.
+
         const volumeResult = await repo
             .createQueryBuilder('t')
             .select('COALESCE(SUM(ABS(t.amount)), 0)', 'volume')
@@ -187,7 +274,6 @@ export class TransactionService {
         };
     }
 
-    // 3. Transaction detail, supporting UUID or transaction reference
     async getTransactionById(id: string) {
         const isUuid =
             /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
@@ -364,14 +450,17 @@ export class TransactionService {
             transaction,
         );
 
+        try {
+            await this.redisService.delPattern('transactions:list:*');
+        } catch (error) {
+            console.log('Redis transaction cache invalidation failed:', error);
+        }
         return {
             message: 'Transaction created successfully',
             data: saved,
         };
     }
 
-
-    // Update transaction status
 
     async updateTransactionStatus(
         id: string,
@@ -466,6 +555,12 @@ export class TransactionService {
 
         const saved =
             await this.databaseService.transactionRepository.save(transaction);
+
+        try {
+            await this.redisService.delPattern('transactions:list:*');
+        } catch (error) {
+            console.log('Redis transaction cache invalidation failed:', error);
+        }
 
         return {
             message: 'Transaction status updated successfully',

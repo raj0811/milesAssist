@@ -16,7 +16,6 @@ export class DashboardService {
         private readonly databaseService: DatabaseService,
     ) { }
 
-    // 1. Overview KPI cards
     async getOverview() {
         const [
             totalUsers,
@@ -179,7 +178,6 @@ export class DashboardService {
         };
     }
 
-    // 2. Revenue chart
     async getRevenueChart(range: RevenueRange = '6m') {
         const now = new Date();
         const start = new Date(now);
@@ -290,7 +288,6 @@ export class DashboardService {
         };
     }
 
-    // 3. Dashboard alerts
     async getAlerts() {
         const pendingTransactions =
             await this.databaseService.transactionRepository.count({
@@ -314,7 +311,6 @@ export class DashboardService {
         };
     }
 
-    // 4. Recent transactions
     async getRecentTransactions(limit = 5) {
         const transactions =
             await this.databaseService.transactionRepository.find({
@@ -340,7 +336,6 @@ export class DashboardService {
         }));
     }
 
-    // 5. Basic application health
     async getSystemHealth() {
         return {
             status: 'ok',
@@ -349,7 +344,7 @@ export class DashboardService {
         };
     }
 
-    // Helper: revenue for current date range
+
     private async getRevenueBetween(): Promise<number> {
         const result =
             await this.databaseService.transactionRepository

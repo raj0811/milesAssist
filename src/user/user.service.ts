@@ -12,11 +12,13 @@ import {
     UserRole,
     UserStatus,
 } from '../database/schemas/user.entity';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class UserService {
     constructor(
         private readonly databaseService: DatabaseService,
+        private readonly redisService: RedisService
     ) { }
 
     async createUser(data: CreateUserDto): Promise<User> {
@@ -42,6 +44,7 @@ export class UserService {
         return this.databaseService.userRepository.save(user);
     }
 
+
     async getUsers(query: GetUsersQueryDto) {
         try {
             const {
@@ -54,28 +57,9 @@ export class UserService {
                 sortOrder = 'DESC',
             } = query;
 
-            const queryBuilder = this.databaseService.userRepository
-                .createQueryBuilder('user');
+            const safePage = Math.max(1, Number(page) || 1);
+            const safeLimit = Math.min(100, Math.max(1, Number(limit) || 10));
 
-            // Search by name or email
-            if (search?.trim()) {
-                queryBuilder.andWhere(
-                    '(user.name ILIKE :search OR user.email ILIKE :search)',
-                    { search: `%${search.trim()}%` },
-                );
-            }
-
-            // Filter by role
-            if (role) {
-                queryBuilder.andWhere('user.role = :role', { role });
-            }
-
-            // Filter by status
-            if (status) {
-                queryBuilder.andWhere('user.status = :status', { status });
-            }
-
-            // Safe sorting
             const allowedSortFields = [
                 'name',
                 'email',
@@ -88,29 +72,89 @@ export class UserService {
                 ? sortBy
                 : 'createdAt';
 
+            const safeSortOrder =
+                String(sortOrder).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+            const normalizedSearch = search?.trim() || '';
+
+            const cacheKey = `users:list:${JSON.stringify({
+                page: safePage,
+                limit: safeLimit,
+                search: normalizedSearch,
+                role: role || '',
+                status: status || '',
+                sortBy: safeSortBy,
+                sortOrder: safeSortOrder,
+            })}`;
+
+            try {
+                const cached = await this.redisService.get<{
+                    data: any[];
+                    pagination: {
+                        total: number;
+                        page: number;
+                        limit: number;
+                        totalPages: number;
+                        hasNextPage: boolean;
+                        hasPreviousPage: boolean;
+                    };
+                }>(cacheKey);
+
+                if (cached !== null) {
+                    return cached;
+                }
+            } catch (error) {
+                console.log('Redis cache read failed:', error);
+            }
+
+            const queryBuilder = this.databaseService.userRepository
+                .createQueryBuilder('user');
+
+            if (normalizedSearch) {
+                queryBuilder.andWhere(
+                    '(user.name ILIKE :search OR user.email ILIKE :search)',
+                    { search: `%${normalizedSearch}%` },
+                );
+            }
+
+            if (role) {
+                queryBuilder.andWhere('user.role = :role', { role });
+            }
+
+            if (status) {
+                queryBuilder.andWhere('user.status = :status', { status });
+            }
+
             queryBuilder
-                .orderBy(`user.${safeSortBy}`, sortOrder)
+                .orderBy(`user.${safeSortBy}`, safeSortOrder)
                 .addOrderBy('user.id', 'ASC');
 
-            // Pagination
-            const skip = (page - 1) * limit;
+            const skip = (safePage - 1) * safeLimit;
 
             const [users, total] = await queryBuilder
                 .skip(skip)
-                .take(limit)
+                .take(safeLimit)
                 .getManyAndCount();
 
-            return {
+            const result = {
                 data: users,
                 pagination: {
                     total,
-                    page,
-                    limit,
-                    totalPages: Math.ceil(total / limit),
-                    hasNextPage: page * limit < total,
-                    hasPreviousPage: page > 1,
+                    page: safePage,
+                    limit: safeLimit,
+                    totalPages: Math.ceil(total / safeLimit),
+                    hasNextPage: safePage * safeLimit < total,
+                    hasPreviousPage: safePage > 1,
                 },
             };
+
+            try {
+                await this.redisService.set(cacheKey, result, 60);
+            } catch (error) {
+                console.log('Redis cache write failed:', error);
+            }
+
+            return result;
         } catch (error) {
             console.error('Failed to fetch users:', error);
 
@@ -119,6 +163,7 @@ export class UserService {
             );
         }
     }
+
 
     async userStats() {
         try {
@@ -242,6 +287,12 @@ export class UserService {
         }
 
         Object.assign(user, data);
+
+        try {
+            await this.redisService.delPattern('users:list:*');
+        } catch (error) {
+            console.log('Redis user cache invalidation failed:', error);
+        }
 
         return this.databaseService.userRepository.save(user);
     }

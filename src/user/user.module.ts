@@ -7,9 +7,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthGuard } from 'src/auth/user.authGuard';
 import { AdminModule } from 'src/admin/admin.module';
 import { AdminService } from 'src/admin/admin.service';
+import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
-  imports: [DatabaseModule, AdminModule],
+  imports: [DatabaseModule, AdminModule, RedisModule],
   providers: [UserService, AdminService, JwtService],
   controllers: [UserController]
 })
